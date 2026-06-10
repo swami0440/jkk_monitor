@@ -1,0 +1,86 @@
+name: JKK Koto-ku vacancy monitor
+
+on:
+  schedule:
+    # Every 15 minutes during JKK's update window only, to fit the free
+    # private-repo budget (2,000 min/month).
+    # JKK updates Mon-Sat 09:30-17:00 JST  ==  Mon-Sat 00:30-08:00 UTC.
+    # ~32-36 runs/day x ~26 days x ~2 min/run  ~=  1,700-1,900 min/month.
+    - cron: "*/15 0-8 * * 1-6"
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: "Debug run: save page HTML/screenshots as a downloadable artifact"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jkk-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Playwright (python pkg)
+        run: pip install playwright
+
+      # Cache the downloaded Chromium so we don't re-download it every run.
+      - name: Cache Playwright browser
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-chromium-${{ runner.os }}
+
+      - name: Install Chromium (only on cache miss)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: python -m playwright install chromium
+
+      # System libs Chromium needs. Fast; safe to run every time.
+      - name: Install system deps
+        run: python -m playwright install-deps chromium
+
+      - name: Run monitor
+        env:
+          JKK_WARD: "江東区"
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ "${{ inputs.debug }}" = "true" ]; then
+            python jkk_monitor.py --debug
+          else
+            python jkk_monitor.py
+          fi
+
+      - name: Upload debug files (only on debug runs)
+        if: ${{ inputs.debug == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: jkk-debug
+          path: debug/
+          if-no-files-found: ignore
+
+      - name: Persist seen-state
+        run: |
+          if [ -n "$(git status --porcelain jkk_seen.json)" ]; then
+            git config user.name  "github-actions"
+            git config user.email "actions@github.com"
+            git add jkk_seen.json
+            git commit -m "update seen state [skip ci]"
+            git push
+          else
+            echo "No state change."
+          fi
