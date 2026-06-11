@@ -328,6 +328,21 @@ def send_telegram(new_rows: list):
     print(f"  Telegram: sent {len(new_rows)} new unit(s)")
 
 
+def _send_no_vacancy_ping():
+    """Heartbeat message so you can confirm the script is running even when no vacancies exist."""
+    if not (TELEGRAM_TOKEN and TELEGRAM_CHAT_ID):
+        print("  no notifier configured, skipping ping")
+        return
+    text = f"\U0001F50D {WARD} — no vacancy found\n\U0001F517 {START_URL}"
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    data = urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": text,
+                      "disable_web_page_preview": "true"}).encode()
+    with urlopen(Request(url, data=data), timeout=20) as resp:
+        if resp.status != 200:
+            raise RuntimeError(f"Telegram returned {resp.status}")
+    print("  Telegram: sent no-vacancy ping")
+
+
 def notify(new_rows: list):
     """Prefer Telegram if configured, else email, else just print."""
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
@@ -379,10 +394,11 @@ def main():
     if args.test_notify:
         listings = search_once(debug=args.debug, headed=args.headed)
         if listings:
-            print(f"  --test-notify: sending {len(listings)} listing(s) as a test alert")
+            print(f"  sending {len(listings)} listing(s)")
             notify(listings)
         else:
-            print("  --test-notify: no listings found to send")
+            print("  no vacancies — sending status ping")
+            _send_no_vacancy_ping()
         return
 
     first = not STATE_FILE.exists()
