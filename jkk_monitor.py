@@ -48,7 +48,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 # ---------------------------------------------------------------------------
 # CONFIG  — override any of these with environment variables
 # ---------------------------------------------------------------------------
-WARD = os.environ.get("JKK_WARD", "江東区")
+WARD = os.environ.get("JKK_WARD", "世田谷区")
 
 # JKK Net search START page (sets the session). The flow then lands on the
 # conditions page. If this URL changes, update it here.
