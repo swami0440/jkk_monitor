@@ -24,6 +24,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    environment: TELEGRAM_TOKEN
     steps:
       - name: Checkout
         uses: actions/checkout@v4
