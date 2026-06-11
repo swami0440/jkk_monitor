@@ -2,11 +2,11 @@ name: JKK Koto-ku vacancy monitor
 
 on:
   schedule:
-    # Every 15 minutes during JKK's update window only, to fit the free
-    # private-repo budget (2,000 min/month).
-    # JKK updates Mon-Sat 09:30-17:00 JST  ==  Mon-Sat 00:30-08:00 UTC.
-    # ~32-36 runs/day x ~26 days x ~2 min/run  ~=  1,700-1,900 min/month.
-    - cron: "*/15 0-8 * * 1-6"
+    # Every 5 minutes, 24/7.
+    # Note: ~12 runs/hr × 24h × 30 days × ~2 min/run ≈ 17,000 min/month.
+    # This exceeds the 2,000 min/month free limit for private repos —
+    # make sure the repo is public or you have a paid GitHub plan.
+    - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
       debug:
@@ -59,9 +59,9 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [ "${{ inputs.debug }}" = "true" ]; then
-            python jkk_monitor.py --debug
+            python jkk_monitor.py --debug --test-notify
           else
-            python jkk_monitor.py
+            python jkk_monitor.py --test-notify
           fi
 
       - name: Upload debug files (only on debug runs)
@@ -71,15 +71,3 @@ jobs:
           name: jkk-debug
           path: debug/
           if-no-files-found: ignore
-
-      - name: Persist seen-state
-        run: |
-          if [ -n "$(git status --porcelain jkk_seen.json)" ]; then
-            git config user.name  "github-actions"
-            git config user.email "actions@github.com"
-            git add jkk_seen.json
-            git commit -m "update seen state [skip ci]"
-            git push
-          else
-            echo "No state change."
-          fi
