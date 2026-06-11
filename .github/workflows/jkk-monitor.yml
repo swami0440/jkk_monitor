@@ -1,12 +1,8 @@
 name: JKK Koto-ku vacancy monitor
 
 on:
-  schedule:
-    # Every 5 minutes, 24/7.
-    # Note: ~12 runs/hr × 24h × 30 days × ~2 min/run ≈ 17,000 min/month.
-    # This exceeds the 2,000 min/month free limit for private repos —
-    # make sure the repo is public or you have a paid GitHub plan.
-    - cron: "*/5 * * * *"
+  # Triggered every 5 minutes by cron-job.org via the GitHub API.
+  # GitHub's own cron scheduler is unreliable for short intervals.
   workflow_dispatch:
     inputs:
       debug:
