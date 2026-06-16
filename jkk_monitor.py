@@ -397,8 +397,7 @@ def main():
             print(f"  sending {len(listings)} listing(s)")
             notify(listings)
         else:
-            print("  no vacancies — sending status ping")
-            _send_no_vacancy_ping()
+            print("  no vacancies — not sending any notification")
         return
 
     first = not STATE_FILE.exists()
